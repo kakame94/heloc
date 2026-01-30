@@ -18,6 +18,7 @@ import {
   Download,
 } from 'lucide-react'
 import { cn, formatCurrency, formatPercent } from '@/lib/utils'
+import { generateBrrrrPdfReport } from '@/lib/pdf-report'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CurrencyInput, PercentInput, Input } from '@/components/ui/input'
@@ -453,8 +454,32 @@ export function BrrrrCalculator({
             variant="outline"
             className="flex-1"
             onClick={() => {
-              // TODO: Générer PDF
-              console.log('Générer PDF')
+              const values = form.getValues()
+              generateBrrrrPdfReport({
+                formValues: {
+                  purchasePrice: values.purchasePrice,
+                  downPaymentPercent: values.downPaymentPercent,
+                  renovationBudget: values.renovationBudget,
+                  projectedMonthlyRent: values.projectedMonthlyRent,
+                  afterRepairValue: values.afterRepairValue,
+                  totalUnits: values.totalUnits,
+                  municipalTaxes: values.municipalTaxes,
+                  schoolTaxes: values.schoolTaxes,
+                  insuranceAnnual: values.insuranceAnnual,
+                  mortgageRate: values.mortgageRate,
+                  refinanceRate: values.refinanceRate,
+                },
+                results: {
+                  roi: results.roi,
+                  roie: results.roie,
+                  cashFlowMonthly: results.cashFlowMonthly,
+                  refinanceCashOutAmount: results.refinanceCashOutAmount,
+                  capRate: results.capRate,
+                  isInfiniteReturn: results.isInfiniteReturn,
+                  dcr: results.dcr,
+                  fullAnalysis: results.fullAnalysis,
+                },
+              })
             }}
           >
             <FileText className="h-4 w-4 mr-2" />
