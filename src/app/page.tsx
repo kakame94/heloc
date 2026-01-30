@@ -38,10 +38,10 @@ export default function HomePage() {
               HELOC
             </Link>
             <Link
-              href="/portefeuille"
+              href="/analyse"
               className="text-sm font-medium hover:text-primary transition-colors"
             >
-              Portefeuille
+              Analyse
             </Link>
             <Link
               href="/guide"

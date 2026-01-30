@@ -66,3 +66,56 @@ export {
   calculateMaxPurchasePrice,
 } from './brrrr-engine'
 export type { QuickBrrrrMetrics } from './brrrr-engine'
+
+// Comparables
+export {
+  analyzeWithComparables,
+  calculatePropertyMultipliers,
+  EXAMPLE_SUBJECT,
+  EXAMPLE_COMPARABLES,
+} from './comparables'
+export type {
+  ComparableProperty,
+  PropertyMultipliers,
+  ComparableAnalysisResult,
+} from './comparables'
+
+// Projections
+export {
+  calculateProjections,
+  calculate8thWonder,
+  EXAMPLE_PROJECTION_PARAMS,
+} from './projections'
+export type {
+  ProjectionParams,
+  YearProjection,
+  ProjectionResult,
+  CompoundGrowthResult,
+} from './projections'
+
+// Amortization (detailed)
+export {
+  generateAmortizationSchedule as generateDetailedAmortization,
+  calculateRemainingBalanceAfterMonths,
+  compareAmortizations,
+} from './amortization'
+export type {
+  AmortizationScheduleResult,
+  AnnualAmortizationSummary,
+  AmortizationComparison,
+} from './amortization'
+
+// Strategies
+export {
+  analyzeCashBackStrategy,
+  analyzeCapitalOnlyStrategy,
+  analyzeAcceleratedPayments,
+} from './strategies'
+export type {
+  CashBackParams,
+  CashBackResult,
+  CapitalOnlyParams,
+  CapitalOnlyResult,
+  AcceleratedPaymentParams,
+  AcceleratedPaymentResult,
+} from './strategies'
