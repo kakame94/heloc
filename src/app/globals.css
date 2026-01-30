@@ -1,0 +1,314 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* PlexInvest Design System - Light Mode */
+    /* Base: Fond blanc/gris très clair (#F8FAFC) */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primaire: Indigo-600 */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Profit: Emerald-500 */
+    --profit: 160 84% 39%;
+    --profit-foreground: 0 0% 100%;
+
+    /* Loss: Rose-500 */
+    --loss: 350 89% 60%;
+    --loss-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 239 84% 67%;
+
+    --radius: 0.5rem;
+
+    /* Charts */
+    --chart-1: 239 84% 67%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 350 89% 60%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 200 98% 39%;
+  }
+
+  .dark {
+    /* PlexInvest Design System - Dark Mode */
+    /* Base: Slate-950 */
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primaire: Indigo-500 en dark */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Profit: Emerald-400 en dark */
+    --profit: 160 72% 47%;
+    --profit-foreground: 0 0% 100%;
+
+    /* Loss: Rose-400 en dark */
+    --loss: 350 89% 65%;
+    --loss-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 239 84% 67%;
+
+    /* Charts Dark */
+    --chart-1: 239 84% 67%;
+    --chart-2: 160 72% 47%;
+    --chart-3: 350 89% 65%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 200 98% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Typography pour données financières */
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* KPI Cards */
+  .kpi-value {
+    @apply text-3xl font-bold font-tabular tracking-tight;
+  }
+
+  .kpi-label {
+    @apply text-sm text-muted-foreground font-medium uppercase tracking-wider;
+  }
+
+  /* Infinite Return Badge */
+  .infinite-return {
+    @apply bg-gradient-to-r from-purple-500 to-indigo-500 text-white;
+  }
+}
+
+@layer components {
+  /* Bento Grid Layout */
+  .bento-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .bento-grid-lg {
+    @apply grid gap-4;
+    grid-template-columns: repeat(12, 1fr);
+  }
+
+  .bento-item {
+    @apply rounded-xl border bg-card p-4 shadow-sm;
+  }
+
+  .bento-item-lg {
+    @apply col-span-12 lg:col-span-8;
+  }
+
+  .bento-item-md {
+    @apply col-span-12 md:col-span-6 lg:col-span-4;
+  }
+
+  .bento-item-sm {
+    @apply col-span-12 md:col-span-4 lg:col-span-3;
+  }
+
+  /* Data Dense Layout */
+  .data-dense {
+    @apply space-y-1;
+  }
+
+  .data-dense-row {
+    @apply flex items-center justify-between py-1;
+  }
+
+  .data-dense-label {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .data-dense-value {
+    @apply text-sm font-medium font-tabular;
+  }
+
+  /* Sensitivity Matrix */
+  .sensitivity-cell {
+    @apply p-2 text-center text-xs font-tabular transition-colors;
+    min-width: 60px;
+  }
+
+  /* Timeline */
+  .timeline-track {
+    @apply relative h-2 bg-muted rounded-full overflow-hidden;
+  }
+
+  .timeline-segment {
+    @apply absolute h-full transition-all duration-300;
+  }
+
+  /* Input styles for financial forms */
+  .input-currency {
+    @apply font-tabular text-right;
+  }
+
+  /* Positive/Negative indicators */
+  .value-positive {
+    @apply text-emerald-600 dark:text-emerald-400;
+  }
+
+  .value-negative {
+    @apply text-rose-600 dark:text-rose-400;
+  }
+
+  .bg-positive {
+    @apply bg-emerald-50 dark:bg-emerald-950/30;
+  }
+
+  .bg-negative {
+    @apply bg-rose-50 dark:bg-rose-950/30;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .kpi-value {
+      @apply text-2xl;
+    }
+
+    .bento-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Text gradient for special values */
+  .text-gradient-profit {
+    @apply bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-infinite {
+    @apply bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent;
+  }
+
+  /* Focus visible for accessibility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
+
+/* Custom animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .bento-item {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+}

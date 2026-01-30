@@ -1,0 +1,642 @@
+// PlexInvest Québec - Schéma Prisma avec PostGIS
+// Architecture: PostgreSQL 16 + Extension PostGIS pour requêtes géospatiales
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// ============================================================================
+// UTILISATEURS ET PROFILS INVESTISSEUR
+// ============================================================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  image             String?
+  emailVerified     DateTime?
+  hashedPassword    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Profil investisseur - données financières personnelles
+  investorProfile   InvestorProfile?
+
+  // Relations
+  properties        Property[]
+  analyses          FinancialAnalysis[]
+  portfolios        Portfolio[]
+  savedSearches     SavedSearch[]
+  alerts            Alert[]
+  accounts          Account[]
+  sessions          Session[]
+
+  @@map("users")
+}
+
+model InvestorProfile {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Capacité financière
+  // NOTE: Decimal pour toute valeur monétaire (jamais Float pour éviter erreurs d'arrondi)
+  availableDownPayment    Decimal  @db.Decimal(12, 2) // Mise de fonds disponible
+  annualGrossIncome       Decimal  @db.Decimal(12, 2) // Revenu brut annuel
+  monthlyDebtPayments     Decimal  @db.Decimal(10, 2) // Paiements mensuels dettes existantes
+
+  // HELOC existant sur résidence principale
+  primaryResidenceValue   Decimal? @db.Decimal(12, 2) // Valeur résidence principale
+  primaryMortgageBalance  Decimal? @db.Decimal(12, 2) // Solde hypothèque actuel
+  helocBalance            Decimal? @db.Decimal(12, 2) // Solde HELOC utilisé
+  helocLimit              Decimal? @db.Decimal(12, 2) // Limite HELOC approuvée
+
+  // Préférences d'investissement
+  targetCashOnCash        Decimal  @default(8.0) @db.Decimal(5, 2) // ROI cible %
+  maxPropertyValue        Decimal? @db.Decimal(12, 2)
+  preferredRegions        String[] // Codes postaux ou régions ciblées
+  propertyTypes           PropertyType[]
+
+  // Tolérance au risque
+  riskTolerance           RiskTolerance @default(MODERATE)
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("investor_profiles")
+}
+
+// ============================================================================
+// PROPRIÉTÉS IMMOBILIÈRES
+// ============================================================================
+
+model Property {
+  id                String    @id @default(cuid())
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id])
+
+  // Identification
+  mlsNumber         String?   @unique // Numéro MLS/Centris si disponible
+  externalId        String?   // ID source externe (scraping)
+  source            DataSource @default(MANUAL)
+
+  // Localisation - PostGIS pour requêtes géospatiales
+  address           String
+  city              String
+  province          String    @default("QC")
+  postalCode        String
+  // Point géographique PostGIS (latitude, longitude)
+  // Format: POINT(longitude latitude)
+  location          Unsupported("geography(Point, 4326)")?
+  latitude          Decimal?  @db.Decimal(10, 8)
+  longitude         Decimal?  @db.Decimal(11, 8)
+
+  // Caractéristiques physiques
+  propertyType      PropertyType
+  yearBuilt         Int?
+  totalUnits        Int       @default(1) // Nombre de logements
+  livingAreaSqFt    Int       // Superficie habitable (pi²)
+  lotSizeSqFt       Int?      // Taille du terrain (pi²)
+  parkingSpaces     Int       @default(0)
+  hasGarage         Boolean   @default(false)
+  basementType      BasementType?
+  basementFinished  Boolean   @default(false)
+  basementSqFt      Int?
+
+  // État et condition
+  condition         PropertyCondition @default(AVERAGE)
+  lastRenovationYear Int?
+  roofAge           Int?      // Âge de la toiture en années
+  heatingType       HeatingType?
+
+  // Données financières de l'annonce
+  askingPrice       Decimal   @db.Decimal(12, 2)
+  assessedValue     Decimal?  @db.Decimal(12, 2) // Évaluation municipale
+  municipalTaxes    Decimal?  @db.Decimal(10, 2) // Taxes municipales annuelles
+  schoolTaxes       Decimal?  @db.Decimal(10, 2) // Taxes scolaires annuelles
+
+  // Revenus locatifs actuels
+  currentMonthlyRent Decimal? @db.Decimal(10, 2) // Loyer total actuel
+  potentialMonthlyRent Decimal? @db.Decimal(10, 2) // Loyer potentiel estimé
+  vacancyRate       Decimal   @default(5.0) @db.Decimal(5, 2) // Taux d'inoccupation %
+
+  // Charges d'exploitation
+  insuranceAnnual   Decimal?  @db.Decimal(10, 2)
+  maintenanceAnnual Decimal?  @db.Decimal(10, 2)
+  utilitiesMonthly  Decimal?  @db.Decimal(10, 2) // Si payées par proprio
+
+  // Métadonnées
+  description       String?   @db.Text
+  listingUrl        String?
+  imageUrls         String[]
+  listedAt          DateTime?
+
+  // Indicateurs calculés (dénormalisés pour performance)
+  pricePerSqFt      Decimal?  @db.Decimal(10, 2)
+  grossRentMultiplier Decimal? @db.Decimal(8, 2) // Prix / Loyer annuel
+  capRate           Decimal?  @db.Decimal(5, 2) // Taux de capitalisation %
+
+  // MLI Select eligibility
+  mliSelectScore    Int?      // Score 0-100 pour MLI Select
+  mliSelectEligible Boolean   @default(false)
+
+  // Statut
+  status            PropertyStatus @default(ACTIVE)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  units             Unit[]
+  analyses          FinancialAnalysis[]
+  comparables       Comparable[]
+  portfolioItems    PortfolioItem[]
+
+  @@index([city])
+  @@index([postalCode])
+  @@index([propertyType])
+  @@index([askingPrice])
+  @@index([totalUnits])
+  @@index([status])
+  @@map("properties")
+}
+
+// Détail par unité (logement) dans un plex
+model Unit {
+  id                String    @id @default(cuid())
+  propertyId        String
+  property          Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  unitNumber        String    // "1", "2", "Sous-sol", etc.
+  bedrooms          Int
+  bathrooms         Decimal   @db.Decimal(3, 1) // 1.5 pour salle de bain avec douche
+  sqFt              Int?
+
+  currentRent       Decimal?  @db.Decimal(10, 2)
+  marketRent        Decimal?  @db.Decimal(10, 2) // Loyer de marché estimé
+
+  isOccupied        Boolean   @default(true)
+  leaseEndDate      DateTime?
+
+  // État de l'unité
+  condition         PropertyCondition @default(AVERAGE)
+  lastRenovated     DateTime?
+  renovationNeeded  Boolean   @default(false)
+  estimatedRenoCost Decimal?  @db.Decimal(10, 2)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("units")
+}
+
+// ============================================================================
+// ANALYSES FINANCIÈRES BRRRR
+// ============================================================================
+
+model FinancialAnalysis {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  propertyId        String
+  property          Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  name              String    // Nom du scénario (ex: "Scénario optimiste")
+  isDefault         Boolean   @default(false)
+
+  // ===== PHASE 1: ACQUISITION (BUY) =====
+  purchasePrice     Decimal   @db.Decimal(12, 2)
+  downPaymentPercent Decimal  @db.Decimal(5, 2) // % de mise de fonds
+  downPaymentAmount Decimal   @db.Decimal(12, 2)
+
+  // Frais d'acquisition
+  transferTax       Decimal   @db.Decimal(10, 2) // Droits de mutation (taxe de bienvenue)
+  notaryFees        Decimal   @default(2000) @db.Decimal(10, 2)
+  inspectionFees    Decimal   @default(800) @db.Decimal(10, 2)
+  otherClosingCosts Decimal   @default(0) @db.Decimal(10, 2)
+
+  // SCHL si mise de fonds < 20%
+  cmhcPremiumPercent Decimal? @db.Decimal(5, 4) // Ex: 0.0400 pour 4%
+  cmhcPremiumAmount Decimal?  @db.Decimal(10, 2)
+
+  // Hypothèque initiale
+  initialMortgageAmount Decimal @db.Decimal(12, 2)
+  initialMortgageRate Decimal @db.Decimal(5, 4) // Taux nominal annuel
+  initialMortgageAmortYears Int @default(25)
+
+  // ===== PHASE 2: RÉNOVATION (REHAB) =====
+  renovationBudget  Decimal   @db.Decimal(12, 2)
+  renovationContingency Decimal @default(10) @db.Decimal(5, 2) // % de contingence
+  renovationDurationMonths Int @default(3)
+
+  // Détail des rénovations
+  renovationDetails Json?     // Stockage flexible du détail par catégorie
+
+  // Financement des travaux
+  renoFinancingType RenoFinancingType @default(HELOC)
+  helocRateForReno  Decimal?  @db.Decimal(5, 4)
+
+  // ===== PHASE 3: LOCATION (RENT) =====
+  projectedMonthlyRent Decimal @db.Decimal(10, 2)
+  projectedVacancyRate Decimal @default(5) @db.Decimal(5, 2)
+
+  // Charges d'exploitation projetées (mensuelles)
+  projectedMunicipalTax Decimal @db.Decimal(10, 2)
+  projectedSchoolTax  Decimal @db.Decimal(10, 2)
+  projectedInsurance  Decimal @db.Decimal(10, 2)
+  projectedMaintenance Decimal @db.Decimal(10, 2) // Typiquement 5-10% des revenus
+  projectedManagement Decimal @default(0) @db.Decimal(10, 2) // Si gestion externe
+  projectedUtilities  Decimal @default(0) @db.Decimal(10, 2)
+
+  // ===== PHASE 4: REFINANCEMENT (REFINANCE) =====
+  afterRepairValue  Decimal   @db.Decimal(12, 2) // ARV
+  refinanceLtvPercent Decimal @default(80) @db.Decimal(5, 2)
+  refinanceMortgageAmount Decimal @db.Decimal(12, 2)
+  refinanceMortgageRate Decimal @db.Decimal(5, 4)
+  refinanceAmortYears Int     @default(25)
+
+  // Règle BSIF: Portion rotative vs amortie
+  helocPortionPercent Decimal? @db.Decimal(5, 2) // Max 65% selon BSIF
+  helocPortionAmount  Decimal? @db.Decimal(12, 2)
+  amortizedPortionAmount Decimal? @db.Decimal(12, 2)
+
+  // Frais de refinancement
+  refinanceAppraisalFee Decimal @default(400) @db.Decimal(10, 2)
+  refinanceLegalFees  Decimal @default(1200) @db.Decimal(10, 2)
+  refinanceOtherFees  Decimal @default(0) @db.Decimal(10, 2)
+
+  // ===== KPIs CALCULÉS =====
+  // Investissement initial total
+  totalCashInvested Decimal   @db.Decimal(12, 2)
+
+  // Extraction de capital au refinancement
+  cashExtractedAtRefi Decimal @db.Decimal(12, 2)
+  equityLeftInDeal  Decimal   @db.Decimal(12, 2)
+
+  // Cashflow mensuel après refinancement
+  monthlyNoi        Decimal   @db.Decimal(10, 2) // Net Operating Income
+  monthlyMortgagePayment Decimal @db.Decimal(10, 2)
+  monthlyCashflow   Decimal   @db.Decimal(10, 2)
+  annualCashflow    Decimal   @db.Decimal(12, 2)
+
+  // Rendements
+  cashOnCashReturn  Decimal   @db.Decimal(6, 2) // ROI sur capital investi %
+  returnOnEquity    Decimal   @db.Decimal(6, 2) // ROI sur équité restante %
+  capRate           Decimal   @db.Decimal(5, 2) // Taux de capitalisation %
+  isInfiniteReturn  Boolean   @default(false) // True si tout le capital récupéré
+
+  // DCR pour financement commercial (5+ logements)
+  debtCoverageRatio Decimal?  @db.Decimal(5, 2)
+  meetsMinDcr       Boolean   @default(true)
+
+  // Stress test BSIF
+  stressTestRate    Decimal   @db.Decimal(5, 4)
+  passesStressTest  Boolean   @default(true)
+
+  // MLI Select (si applicable)
+  mliSelectEligible Boolean   @default(false)
+  mliSelectAmortization Int?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([propertyId, name])
+  @@index([userId])
+  @@map("financial_analyses")
+}
+
+// ============================================================================
+// DONNÉES DE MARCHÉ ET COMPARABLES
+// ============================================================================
+
+model MarketData {
+  id                String    @id @default(cuid())
+
+  // Localisation
+  postalCode        String
+  city              String
+  neighborhood      String?
+
+  // Type de données
+  dataType          MarketDataType
+  propertyType      PropertyType
+
+  // Valeurs
+  medianPrice       Decimal?  @db.Decimal(12, 2)
+  avgPricePerSqFt   Decimal?  @db.Decimal(10, 2)
+  medianRent        Decimal?  @db.Decimal(10, 2)
+  avgRentPerSqFt    Decimal?  @db.Decimal(8, 2)
+  avgCapRate        Decimal?  @db.Decimal(5, 2)
+  avgDaysOnMarket   Int?
+  inventoryCount    Int?
+
+  // Période
+  periodStart       DateTime
+  periodEnd         DateTime
+
+  // Source
+  source            DataSource
+
+  createdAt         DateTime  @default(now())
+
+  @@unique([postalCode, propertyType, dataType, periodStart])
+  @@index([city])
+  @@index([postalCode])
+  @@map("market_data")
+}
+
+model Comparable {
+  id                String    @id @default(cuid())
+  propertyId        String
+  property          Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Propriété comparable
+  address           String
+  city              String
+  postalCode        String
+
+  // Caractéristiques
+  propertyType      PropertyType
+  totalUnits        Int
+  livingAreaSqFt    Int
+  yearBuilt         Int?
+  condition         PropertyCondition
+
+  // Données de vente
+  salePrice         Decimal   @db.Decimal(12, 2)
+  saleDate          DateTime
+  pricePerSqFt      Decimal   @db.Decimal(10, 2)
+  daysOnMarket      Int?
+
+  // Distance du sujet
+  distanceKm        Decimal   @db.Decimal(6, 3)
+
+  // Ajustements pour comparaison
+  adjustmentNotes   String?   @db.Text
+  adjustedValue     Decimal?  @db.Decimal(12, 2)
+
+  source            DataSource
+
+  createdAt         DateTime  @default(now())
+
+  @@index([propertyId])
+  @@index([saleDate])
+  @@map("comparables")
+}
+
+// ============================================================================
+// PORTEFEUILLE ET SUIVI
+// ============================================================================
+
+model Portfolio {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+
+  // Agrégats calculés
+  totalValue        Decimal   @default(0) @db.Decimal(14, 2)
+  totalEquity       Decimal   @default(0) @db.Decimal(14, 2)
+  totalMonthlyCashflow Decimal @default(0) @db.Decimal(12, 2)
+  avgCashOnCash     Decimal   @default(0) @db.Decimal(6, 2)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  items             PortfolioItem[]
+
+  @@unique([userId, name])
+  @@map("portfolios")
+}
+
+model PortfolioItem {
+  id                String    @id @default(cuid())
+  portfolioId       String
+  portfolio         Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  propertyId        String
+  property          Property  @relation(fields: [propertyId], references: [id])
+
+  // Données de possession
+  purchaseDate      DateTime?
+  purchasePrice     Decimal?  @db.Decimal(12, 2)
+  currentValue      Decimal?  @db.Decimal(12, 2)
+  mortgageBalance   Decimal?  @db.Decimal(12, 2)
+
+  // Phase BRRRR actuelle
+  brrrrPhase        BrrrrPhase @default(ACQUISITION)
+
+  notes             String?   @db.Text
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([portfolioId, propertyId])
+  @@map("portfolio_items")
+}
+
+// ============================================================================
+// RECHERCHES ET ALERTES
+// ============================================================================
+
+model SavedSearch {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name              String
+
+  // Critères de recherche
+  cities            String[]
+  postalCodes       String[]
+  propertyTypes     PropertyType[]
+  minPrice          Decimal?  @db.Decimal(12, 2)
+  maxPrice          Decimal?  @db.Decimal(12, 2)
+  minUnits          Int?
+  maxUnits          Int?
+  minCashflow       Decimal?  @db.Decimal(10, 2)
+  minCashOnCash     Decimal?  @db.Decimal(5, 2)
+  maxPricePerSqFt   Decimal?  @db.Decimal(10, 2)
+  keywords          String[]  // Mots-clés à chercher dans description
+
+  // Alertes
+  alertEnabled      Boolean   @default(false)
+  alertFrequency    AlertFrequency @default(DAILY)
+  lastAlertSent     DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("saved_searches")
+}
+
+model Alert {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type              AlertType
+  title             String
+  message           String    @db.Text
+  data              Json?     // Données contextuelles (propertyId, etc.)
+
+  isRead            Boolean   @default(false)
+  readAt            DateTime?
+
+  createdAt         DateTime  @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("alerts")
+}
+
+// ============================================================================
+// AUTHENTIFICATION (NextAuth.js compatible)
+// ============================================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum PropertyType {
+  SINGLE_FAMILY     // Unifamiliale
+  DUPLEX
+  TRIPLEX
+  QUADRUPLEX
+  PLEX_5_PLUS       // 5+ logements (commercial)
+  CONDO
+  TOWNHOUSE
+  COMMERCIAL
+}
+
+enum PropertyCondition {
+  EXCELLENT         // Impeccable, récemment rénové
+  GOOD              // Bon état général
+  AVERAGE           // Quelques mises à jour nécessaires
+  FAIR              // Rénovations importantes requises
+  POOR              // Projet majeur, "flip" nécessaire
+}
+
+enum PropertyStatus {
+  ACTIVE            // En vente
+  PENDING           // Offre acceptée
+  SOLD              // Vendu
+  DELISTED          // Retiré du marché
+  ARCHIVED          // Archivé par l'utilisateur
+}
+
+enum BasementType {
+  FULL
+  PARTIAL
+  CRAWL
+  SLAB
+  NONE
+}
+
+enum HeatingType {
+  FORCED_AIR
+  HOT_WATER
+  ELECTRIC_BASEBOARD
+  HEAT_PUMP
+  RADIANT_FLOOR
+  OTHER
+}
+
+enum DataSource {
+  MANUAL            // Entrée manuelle
+  CENTRIS           // MLS Québec
+  REALTOR_CA        // Realtor.ca
+  DUPROPRIO
+  JLR               // Registre foncier
+  KIJIJI
+  FACEBOOK
+  KANGALOU
+  SCRAPING
+}
+
+enum MarketDataType {
+  SALE_PRICES       // Prix de vente
+  RENTAL_PRICES     // Prix de location
+  MARKET_TRENDS     // Tendances
+}
+
+enum RenoFinancingType {
+  CASH              // Comptant
+  HELOC             // Marge de crédit hypothécaire
+  PERSONAL_LOC      // Marge de crédit personnelle
+  PRIVATE_LOAN      // Prêt privé
+}
+
+enum BrrrrPhase {
+  ACQUISITION       // Achat en cours
+  RENOVATION        // Travaux en cours
+  RENTING           // Mise en location
+  REFINANCING       // Refinancement en cours
+  STABILIZED        // Projet complété et stabilisé
+}
+
+enum RiskTolerance {
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
+}
+
+enum AlertType {
+  NEW_LISTING       // Nouvelle propriété correspondant aux critères
+  PRICE_DROP        // Baisse de prix
+  HELOC_AVAILABLE   // Nouvelle équité disponible
+  MARKET_UPDATE     // Mise à jour du marché
+  SYSTEM            // Notification système
+}
+
+enum AlertFrequency {
+  INSTANT
+  DAILY
+  WEEKLY
+}
