@@ -98,8 +98,8 @@ export function calculateBRRRR(input: PropertyFinancials): BrrrrCalculationResul
 
   // Montant hypothécaire initial
   const loanAmount = purchasePrice.minus(downPaymentAmount)
-  const initialMortgageAmount = cmhcResult.cmhcPremiumAmount
-    ? loanAmount.plus(cmhcResult.cmhcPremiumAmount).toNumber()
+  const initialMortgageAmount = cmhcResult.premiumAmount
+    ? loanAmount.plus(cmhcResult.premiumAmount).toNumber()
     : loanAmount.toNumber()
 
   // Paiement hypothécaire mensuel initial
@@ -121,8 +121,8 @@ export function calculateBRRRR(input: PropertyFinancials): BrrrrCalculationResul
     notaryFees,
     inspectionFees,
     otherClosingCosts,
-    cmhcPremium: cmhcResult.cmhcPremiumAmount,
-    cmhcPremiumPercent: cmhcResult.cmhcPremiumRate,
+    cmhcPremium: cmhcResult.premiumAmount,
+    cmhcPremiumPercent: cmhcResult.premiumRate,
     totalClosingCosts,
     initialMortgageAmount,
     initialMonthlyPayment,

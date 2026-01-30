@@ -12,6 +12,7 @@
 
 import Decimal from 'decimal.js'
 import { BSIF_RULES, type HelocCapacityInput, type HelocCapacityResult } from '@/types/financial'
+export type { HelocCapacityResult } from '@/types/financial'
 import { calculateInterestOnlyPayment, calculateMonthlyMortgagePayment } from './mortgage'
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP })

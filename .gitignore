@@ -72,3 +72,6 @@ prisma/migrations/
 
 # Docker
 .docker/
+
+# Local Netlify folder
+.netlify
