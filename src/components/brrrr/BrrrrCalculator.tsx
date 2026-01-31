@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import dynamic from 'next/dynamic'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,6 +17,7 @@ import {
   AlertTriangle,
   FileText,
   Download,
+  Loader2,
 } from 'lucide-react'
 import { cn, formatCurrency, formatPercent } from '@/lib/utils'
 import { generateBrrrrPdfReport } from '@/lib/pdf-report'
@@ -26,6 +28,28 @@ import { Label } from '@/components/ui/label'
 import { KpiGrid } from './KpiCard'
 import { BrrrrTimeline } from './BrrrrTimeline'
 import { useBrrrrCalculator, type BrrrrFormInput } from '@/hooks/useBrrrrCalculator'
+import type { ExtractedPropertyData } from '@/lib/pdf-extractor'
+
+// Import dynamique du PdfUploader pour éviter les erreurs SSG avec PDF.js
+const PdfUploader = dynamic(
+  () => import('./PdfUploader').then((mod) => mod.PdfUploader),
+  {
+    ssr: false,
+    loading: () => (
+      <Card className="overflow-hidden">
+        <CardHeader className="py-3 px-4 bg-gradient-to-r from-primary/10 to-primary/5">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Importer une fiche PDF
+          </CardTitle>
+        </CardHeader>
+        <div className="p-4 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </Card>
+    ),
+  }
+)
 
 // Schéma de validation
 const brrrrFormSchema = z.object({
@@ -166,10 +190,40 @@ export function BrrrrCalculator({
     </button>
   )
 
+  // Fonction pour appliquer les données extraites du PDF
+  const handlePdfDataExtracted = (data: ExtractedPropertyData) => {
+    if (data.askingPrice) {
+      form.setValue('purchasePrice', data.askingPrice)
+      // ARV estimé à +10% du prix d'achat par défaut
+      form.setValue('afterRepairValue', Math.round(data.askingPrice * 1.1))
+    }
+    if (data.numberOfUnits) {
+      form.setValue('totalUnits', data.numberOfUnits)
+    }
+    if (data.totalMonthlyRent) {
+      form.setValue('projectedMonthlyRent', data.totalMonthlyRent)
+    }
+    if (data.municipalTaxes) {
+      form.setValue('municipalTaxes', data.municipalTaxes)
+    }
+    if (data.schoolTaxes) {
+      form.setValue('schoolTaxes', data.schoolTaxes)
+    }
+    if (data.insurance) {
+      form.setValue('insuranceAnnual', data.insurance)
+    }
+    if (data.postalCode) {
+      form.setValue('postalCode', data.postalCode)
+    }
+  }
+
   return (
     <div className={cn('grid gap-6 lg:grid-cols-2', className)}>
       {/* Formulaire - Colonne gauche */}
       <div className="space-y-4">
+        {/* Upload PDF */}
+        <PdfUploader onDataExtracted={handlePdfDataExtracted} />
+
         <form className="space-y-4">
           {/* Section Acquisition */}
           <Card>
