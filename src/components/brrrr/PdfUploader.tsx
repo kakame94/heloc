@@ -89,6 +89,7 @@ const PROCESSING_STEPS = [
 export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
   const [state, setState] = React.useState<UploadState>('idle')
   const [currentStep, setCurrentStep] = React.useState(0)
+  const [allStepsComplete, setAllStepsComplete] = React.useState(false)
   const [extractedData, setExtractedData] = React.useState<ExtractedPropertyData | null>(null)
   const [fileName, setFileName] = React.useState<string>('')
   const [showDetails, setShowDetails] = React.useState(false)
@@ -108,32 +109,29 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
     setFileName(file.name)
     setState('processing')
     setCurrentStep(0)
-
-    // Simuler la progression des étapes pendant l'extraction réelle
-    const stepPromise = new Promise<void>((resolve) => {
-      let step = 0
-      const advanceStep = () => {
-        if (step < PROCESSING_STEPS.length - 1) {
-          step++
-          setCurrentStep(step)
-          setTimeout(advanceStep, PROCESSING_STEPS[step].duration)
-        } else {
-          resolve()
-        }
-      }
-      setTimeout(advanceStep, PROCESSING_STEPS[0].duration)
-    })
+    setAllStepsComplete(false)
 
     try {
-      // Lancer l'extraction en parallèle avec l'animation
-      const [data] = await Promise.all([
-        extractPropertyDataFromPdf(file),
-        stepPromise
-      ])
+      // Lancer l'extraction avec progression simulée en parallèle
+      let stepIndex = 0
+      const stepInterval = setInterval(() => {
+        if (stepIndex < PROCESSING_STEPS.length - 1) {
+          stepIndex++
+          setCurrentStep(stepIndex)
+        }
+      }, 350) // Avancer rapidement
 
-      // S'assurer qu'on montre la dernière étape
+      const data = await extractPropertyDataFromPdf(file)
+
+      // Arrêter l'intervalle et passer directement à la fin
+      clearInterval(stepInterval)
       setCurrentStep(PROCESSING_STEPS.length - 1)
-      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Marquer toutes les étapes comme complètes (pour afficher la coche verte)
+      setAllStepsComplete(true)
+
+      // Court délai pour montrer "Analyse terminée ✓" puis afficher les résultats
+      await new Promise(resolve => setTimeout(resolve, 400))
 
       setExtractedData(data)
       setState('success')
@@ -178,6 +176,7 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
   const handleReset = () => {
     setState('idle')
     setCurrentStep(0)
+    setAllStepsComplete(false)
     setExtractedData(null)
     setFileName('')
     setShowDetails(false)
@@ -260,8 +259,9 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
             <div className="space-y-2 mt-4">
               {PROCESSING_STEPS.map((step, index) => {
                 const StepIcon = step.icon
-                const isCompleted = index < currentStep
-                const isCurrent = index === currentStep
+                const isLastStep = index === PROCESSING_STEPS.length - 1
+                const isCompleted = index < currentStep || (isLastStep && allStepsComplete)
+                const isCurrent = index === currentStep && !allStepsComplete
                 const isPending = index > currentStep
 
                 return (
@@ -270,7 +270,8 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
                     className={cn(
                       'flex items-center gap-3 p-2 rounded-lg transition-all duration-300',
                       isCurrent && 'bg-primary/10',
-                      isCompleted && 'opacity-60'
+                      isCompleted && !isLastStep && 'opacity-60',
+                      isCompleted && isLastStep && 'bg-emerald-50 dark:bg-emerald-950/30'
                     )}
                   >
                     {/* Icône de statut */}
@@ -293,6 +294,7 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
                     <div className="flex-1 min-w-0">
                       <p className={cn(
                         'text-sm font-medium',
+                        isCompleted && isLastStep && 'text-emerald-700 dark:text-emerald-400',
                         isCurrent && 'text-primary',
                         isPending && 'text-muted-foreground'
                       )}>
@@ -303,12 +305,20 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
                           {step.description}
                         </p>
                       )}
+                      {isCompleted && isLastStep && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                          Prêt à appliquer les données!
+                        </p>
+                      )}
                     </div>
 
                     {/* Indicateur de complétion */}
                     {isCompleted && (
-                      <span className="text-xs text-emerald-600 font-medium">
-                        OK
+                      <span className={cn(
+                        'text-xs font-medium',
+                        isLastStep ? 'text-emerald-600 font-semibold' : 'text-emerald-600'
+                      )}>
+                        {isLastStep ? '✓' : 'OK'}
                       </span>
                     )}
                   </div>
