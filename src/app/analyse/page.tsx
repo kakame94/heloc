@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   Building2,
@@ -17,6 +18,8 @@ import {
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
+  FileText,
+  Loader2,
 } from 'lucide-react'
 import { cn, formatCurrency, formatPercent } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -36,6 +39,7 @@ import {
   calculateProjections,
   calculate8thWonder,
   EXAMPLE_PROJECTION_PARAMS,
+  type ProjectionParams,
 } from '@/lib/calculations/projections'
 
 import {
@@ -49,10 +53,89 @@ import {
   analyzeAcceleratedPayments,
 } from '@/lib/calculations/strategies'
 
+import type { ExtractedPropertyData } from '@/lib/pdf-extractor'
+
+// Import dynamique du PdfUploader pour éviter les erreurs SSG
+const DynamicPdfUploader = dynamic(
+  () => import('@/components/brrrr/PdfUploader').then((mod) => mod.PdfUploader),
+  { ssr: false }
+)
+
+function PdfUploaderSection({ onDataExtracted }: { onDataExtracted: (data: ExtractedPropertyData) => void }) {
+  const [isClient, setIsClient] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <Card className="overflow-hidden border-2 border-dashed border-primary/30 bg-primary/5">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            Importer une fiche PDF
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 text-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Chargement...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return <DynamicPdfUploader onDataExtracted={onDataExtracted} />
+}
+
 type TabId = 'comparables' | 'projections' | 'amortization' | 'strategies'
+
+// Interface pour les données partagées entre les onglets
+interface PropertyData {
+  address: string
+  salePrice: number
+  numberOfUnits: number
+  monthlyRents: number[]
+  totalMonthlyRent: number
+  municipalTax: number
+  schoolTax: number
+  insurance: number
+}
+
+// Valeurs par défaut basées sur l'exemple Walkens
+const DEFAULT_PROPERTY_DATA: PropertyData = {
+  address: '',
+  salePrice: 0,
+  numberOfUnits: 1,
+  monthlyRents: [],
+  totalMonthlyRent: 0,
+  municipalTax: 0,
+  schoolTax: 0,
+  insurance: 2400, // Estimation par défaut
+}
 
 export default function AnalysePage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('comparables')
+  const [propertyData, setPropertyData] = React.useState<PropertyData>(DEFAULT_PROPERTY_DATA)
+  const [isDataLoaded, setIsDataLoaded] = React.useState(false)
+
+  // Convertir les données extraites du PDF vers le format PropertyData
+  const handlePdfDataExtracted = React.useCallback((data: ExtractedPropertyData) => {
+    const newPropertyData: PropertyData = {
+      address: data.address || '',
+      salePrice: data.askingPrice || 0,
+      numberOfUnits: data.numberOfUnits || 1,
+      monthlyRents: data.monthlyRents || [],
+      totalMonthlyRent: data.totalMonthlyRent || (data.monthlyRents?.reduce((a, b) => a + b, 0) || 0),
+      municipalTax: data.municipalTaxes || 0,
+      schoolTax: data.schoolTaxes || 0,
+      // Estimation assurance si non fournie: ~0.5% de la valeur
+      insurance: data.insurance || Math.round((data.askingPrice || 0) * 0.005) || 2400,
+    }
+
+    setPropertyData(newPropertyData)
+    setIsDataLoaded(true)
+  }, [])
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: 'comparables', label: 'Comparables', icon: Building2 },
@@ -93,8 +176,46 @@ export default function AnalysePage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Analyse Avancée</h1>
           <p className="text-muted-foreground">
-            Outils professionnels d'analyse immobilière inspirés du modèle Walkens
+            Importez une fiche PDF pour analyser automatiquement votre propriété
           </p>
+        </div>
+
+        {/* PDF Upload Section */}
+        <div className="mb-8">
+          <PdfUploaderSection onDataExtracted={handlePdfDataExtracted} />
+
+          {/* Indicateur de données chargées */}
+          {isDataLoaded && propertyData.salePrice > 0 && (
+            <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium mb-2">
+                <Building2 className="h-4 w-4" />
+                Propriété importée
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Prix: </span>
+                  <span className="font-semibold">{formatCurrency(propertyData.salePrice)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Logements: </span>
+                  <span className="font-semibold">{propertyData.numberOfUnits}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Loyers: </span>
+                  <span className="font-semibold">{formatCurrency(propertyData.totalMonthlyRent)}/mois</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Taxes: </span>
+                  <span className="font-semibold">{formatCurrency(propertyData.municipalTax + propertyData.schoolTax)}/an</span>
+                </div>
+              </div>
+              {propertyData.address && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {propertyData.address}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -113,10 +234,10 @@ export default function AnalysePage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'comparables' && <ComparablesTab />}
-        {activeTab === 'projections' && <ProjectionsTab />}
-        {activeTab === 'amortization' && <AmortizationTab />}
-        {activeTab === 'strategies' && <StrategiesTab />}
+        {activeTab === 'comparables' && <ComparablesTab propertyData={propertyData} setPropertyData={setPropertyData} />}
+        {activeTab === 'projections' && <ProjectionsTab propertyData={propertyData} />}
+        {activeTab === 'amortization' && <AmortizationTab propertyData={propertyData} />}
+        {activeTab === 'strategies' && <StrategiesTab propertyData={propertyData} />}
       </div>
     </div>
   )
@@ -125,8 +246,52 @@ export default function AnalysePage() {
 // ============================================================================
 // TAB: COMPARABLES
 // ============================================================================
-function ComparablesTab() {
-  const [subject, setSubject] = React.useState<ComparableProperty>(EXAMPLE_SUBJECT)
+function ComparablesTab({ propertyData, setPropertyData }: { propertyData: PropertyData; setPropertyData: (data: PropertyData) => void }) {
+  // Convertir propertyData vers ComparableProperty pour le sujet
+  const [subject, setSubject] = React.useState<ComparableProperty>(() => ({
+    address: propertyData.address || EXAMPLE_SUBJECT.address,
+    numberOfUnits: propertyData.numberOfUnits || EXAMPLE_SUBJECT.numberOfUnits,
+    salePrice: propertyData.salePrice || EXAMPLE_SUBJECT.salePrice,
+    monthlyRents: propertyData.monthlyRents.length > 0 ? propertyData.monthlyRents : EXAMPLE_SUBJECT.monthlyRents,
+    annualExpenses: {
+      municipalTax: propertyData.municipalTax || EXAMPLE_SUBJECT.annualExpenses.municipalTax,
+      schoolTax: propertyData.schoolTax || EXAMPLE_SUBJECT.annualExpenses.schoolTax,
+      insurance: propertyData.insurance || EXAMPLE_SUBJECT.annualExpenses.insurance,
+    }
+  }))
+
+  // Mettre à jour le sujet quand propertyData change
+  React.useEffect(() => {
+    if (propertyData.salePrice > 0) {
+      setSubject({
+        address: propertyData.address,
+        numberOfUnits: propertyData.numberOfUnits,
+        salePrice: propertyData.salePrice,
+        monthlyRents: propertyData.monthlyRents,
+        annualExpenses: {
+          municipalTax: propertyData.municipalTax,
+          schoolTax: propertyData.schoolTax,
+          insurance: propertyData.insurance,
+        }
+      })
+    }
+  }, [propertyData])
+
+  // Synchroniser les changements du sujet vers propertyData
+  const updateSubject = (newSubject: ComparableProperty) => {
+    setSubject(newSubject)
+    setPropertyData({
+      address: newSubject.address,
+      salePrice: newSubject.salePrice,
+      numberOfUnits: newSubject.numberOfUnits,
+      monthlyRents: newSubject.monthlyRents,
+      totalMonthlyRent: newSubject.monthlyRents.reduce((a, b) => a + b, 0),
+      municipalTax: newSubject.annualExpenses.municipalTax,
+      schoolTax: newSubject.annualExpenses.schoolTax,
+      insurance: newSubject.annualExpenses.insurance,
+    })
+  }
+
   const [comparables, setComparables] = React.useState<ComparableProperty[]>(EXAMPLE_COMPARABLES)
 
   const analysis = React.useMemo(() => {
@@ -145,7 +310,7 @@ function ComparablesTab() {
             <Building2 className="h-5 w-5" />
             Propriété Sujet
           </CardTitle>
-          <CardDescription>La propriété que vous analysez</CardDescription>
+          <CardDescription>La propriété que vous analysez (importée du PDF ou saisie manuellement)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -153,14 +318,14 @@ function ComparablesTab() {
               <Label>Adresse</Label>
               <Input
                 value={subject.address}
-                onChange={(e) => setSubject({ ...subject, address: e.target.value })}
+                onChange={(e) => updateSubject({ ...subject, address: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Prix de vente</Label>
               <CurrencyInput
                 value={subject.salePrice}
-                onChange={(e) => setSubject({ ...subject, salePrice: Number(e.target.value) || 0 })}
+                onChange={(e) => updateSubject({ ...subject, salePrice: Number(e.target.value) || 0 })}
               />
             </div>
             <div className="space-y-2">
@@ -168,7 +333,7 @@ function ComparablesTab() {
               <Input
                 type="number"
                 value={subject.numberOfUnits}
-                onChange={(e) => setSubject({ ...subject, numberOfUnits: Number(e.target.value) || 1 })}
+                onChange={(e) => updateSubject({ ...subject, numberOfUnits: Number(e.target.value) || 1 })}
               />
             </div>
             <div className="space-y-2">
@@ -177,7 +342,7 @@ function ComparablesTab() {
                 value={subject.monthlyRents.join(', ')}
                 onChange={(e) => {
                   const rents = e.target.value.split(',').map(r => Number(r.trim()) || 0)
-                  setSubject({ ...subject, monthlyRents: rents })
+                  updateSubject({ ...subject, monthlyRents: rents })
                 }}
                 placeholder="1150, 1720"
               />
@@ -189,7 +354,7 @@ function ComparablesTab() {
               <Label>Taxes municipales (annuel)</Label>
               <CurrencyInput
                 value={subject.annualExpenses.municipalTax}
-                onChange={(e) => setSubject({
+                onChange={(e) => updateSubject({
                   ...subject,
                   annualExpenses: { ...subject.annualExpenses, municipalTax: Number(e.target.value) || 0 }
                 })}
@@ -199,7 +364,7 @@ function ComparablesTab() {
               <Label>Taxes scolaires (annuel)</Label>
               <CurrencyInput
                 value={subject.annualExpenses.schoolTax}
-                onChange={(e) => setSubject({
+                onChange={(e) => updateSubject({
                   ...subject,
                   annualExpenses: { ...subject.annualExpenses, schoolTax: Number(e.target.value) || 0 }
                 })}
@@ -209,7 +374,7 @@ function ComparablesTab() {
               <Label>Assurance (annuel)</Label>
               <CurrencyInput
                 value={subject.annualExpenses.insurance}
-                onChange={(e) => setSubject({
+                onChange={(e) => updateSubject({
                   ...subject,
                   annualExpenses: { ...subject.annualExpenses, insurance: Number(e.target.value) || 0 }
                 })}
@@ -241,23 +406,28 @@ function ComparablesTab() {
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Comparables ({comparables.length})
+              Comparables ({comparables.length}/3 max)
             </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setComparables([...comparables, {
-                address: '',
-                numberOfUnits: subject.numberOfUnits,
-                salePrice: 0,
-                monthlyRents: [],
-                annualExpenses: { municipalTax: 0, schoolTax: 0, insurance: 0 }
-              }])}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Ajouter
-            </Button>
+            {comparables.length < 3 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setComparables([...comparables, {
+                  address: '',
+                  numberOfUnits: subject.numberOfUnits,
+                  salePrice: 0,
+                  monthlyRents: [],
+                  annualExpenses: { municipalTax: 0, schoolTax: 0, insurance: 0 }
+                }])}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Ajouter
+              </Button>
+            )}
           </CardTitle>
+          <CardDescription>
+            Propriétés similaires vendues ou en vente dans le quartier
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -425,8 +595,25 @@ function ComparablesTab() {
 // ============================================================================
 // TAB: PROJECTIONS
 // ============================================================================
-function ProjectionsTab() {
-  const [params, setParams] = React.useState(EXAMPLE_PROJECTION_PARAMS)
+function ProjectionsTab({ propertyData }: { propertyData: PropertyData }) {
+  const [params, setParams] = React.useState<ProjectionParams>(() => ({
+    ...EXAMPLE_PROJECTION_PARAMS,
+    purchasePrice: propertyData.salePrice || EXAMPLE_PROJECTION_PARAMS.purchasePrice,
+    monthlyRent: propertyData.totalMonthlyRent || EXAMPLE_PROJECTION_PARAMS.monthlyRent,
+    annualExpenses: (propertyData.municipalTax + propertyData.schoolTax + propertyData.insurance) || EXAMPLE_PROJECTION_PARAMS.annualExpenses,
+  }))
+
+  // Mettre à jour quand propertyData change
+  React.useEffect(() => {
+    if (propertyData.salePrice > 0) {
+      setParams(prev => ({
+        ...prev,
+        purchasePrice: propertyData.salePrice,
+        monthlyRent: propertyData.totalMonthlyRent,
+        annualExpenses: propertyData.municipalTax + propertyData.schoolTax + propertyData.insurance,
+      }))
+    }
+  }, [propertyData])
 
   const projections = React.useMemo(() => {
     return calculateProjections(params)
@@ -442,6 +629,9 @@ function ProjectionsTab() {
       <Card>
         <CardHeader>
           <CardTitle>Paramètres de Projection</CardTitle>
+          <CardDescription>
+            {propertyData.salePrice > 0 && 'Données pré-remplies depuis le PDF importé'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -630,10 +820,20 @@ function ProjectionsTab() {
 // ============================================================================
 // TAB: AMORTIZATION
 // ============================================================================
-function AmortizationTab() {
-  const [loanAmount, setLoanAmount] = React.useState(409760)
+function AmortizationTab({ propertyData }: { propertyData: PropertyData }) {
+  // Calculer le montant du prêt basé sur 80% LTV
+  const defaultLoanAmount = propertyData.salePrice > 0 ? Math.round(propertyData.salePrice * 0.8) : 409760
+
+  const [loanAmount, setLoanAmount] = React.useState(defaultLoanAmount)
   const [rate, setRate] = React.useState(4)
   const [years, setYears] = React.useState(25)
+
+  // Mettre à jour quand propertyData change
+  React.useEffect(() => {
+    if (propertyData.salePrice > 0) {
+      setLoanAmount(Math.round(propertyData.salePrice * 0.8))
+    }
+  }, [propertyData.salePrice])
 
   const schedule = React.useMemo(() => {
     return generateAmortizationSchedule(loanAmount, rate / 100, years)
@@ -649,6 +849,9 @@ function AmortizationTab() {
       <Card>
         <CardHeader>
           <CardTitle>Table d'Amortissement</CardTitle>
+          <CardDescription>
+            {propertyData.salePrice > 0 && `Basé sur 80% LTV du prix de ${formatCurrency(propertyData.salePrice)}`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4">
@@ -773,11 +976,20 @@ function AmortizationTab() {
 // ============================================================================
 // TAB: STRATEGIES
 // ============================================================================
-function StrategiesTab() {
-  const [loanAmount, setLoanAmount] = React.useState(394000)
+function StrategiesTab({ propertyData }: { propertyData: PropertyData }) {
+  const defaultLoanAmount = propertyData.salePrice > 0 ? Math.round(propertyData.salePrice * 0.95) : 394000
+
+  const [loanAmount, setLoanAmount] = React.useState(defaultLoanAmount)
   const [baseRate, setBaseRate] = React.useState(4.5)
   const [cashBackRate, setCashBackRate] = React.useState(5.5)
   const [cashBackPercent, setCashBackPercent] = React.useState(3)
+
+  // Mettre à jour quand propertyData change
+  React.useEffect(() => {
+    if (propertyData.salePrice > 0) {
+      setLoanAmount(Math.round(propertyData.salePrice * 0.95))
+    }
+  }, [propertyData.salePrice])
 
   const cashBackAnalysis = React.useMemo(() => {
     return analyzeCashBackStrategy({
@@ -815,6 +1027,9 @@ function StrategiesTab() {
       <Card>
         <CardHeader>
           <CardTitle>Paramètres</CardTitle>
+          <CardDescription>
+            {propertyData.salePrice > 0 && `Basé sur un prêt de 95% LTV (${formatCurrency(loanAmount)})`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-4 gap-4">
