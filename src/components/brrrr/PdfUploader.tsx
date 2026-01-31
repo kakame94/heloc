@@ -101,21 +101,21 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
   const validation = extractedData ? validateExtractedData(extractedData) : null
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
-      <CardHeader className="py-3 px-4 bg-gradient-to-r from-primary/10 to-primary/5">
-        <CardTitle className="text-sm flex items-center gap-2">
+    <Card className={cn('overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-blue-50 dark:from-primary/10 dark:to-blue-950/20', className)}>
+      <CardHeader className="py-3 px-4 bg-gradient-to-r from-primary/20 to-primary/10">
+        <CardTitle className="text-sm flex items-center gap-2 text-primary">
           <FileText className="h-4 w-4" />
-          Importer une fiche PDF
+          📄 Importer une fiche PDF (Centris, DuProprio...)
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         {state === 'idle' && (
           <div
             className={cn(
-              'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
+              'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200',
               dragActive
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-primary/50'
+                ? 'border-primary bg-primary/10 scale-[1.02]'
+                : 'border-primary/40 hover:border-primary hover:bg-primary/5 hover:scale-[1.01]'
             )}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -130,12 +130,17 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
               className="hidden"
               onChange={handleChange}
             />
-            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm font-medium">
+            <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Upload className="h-8 w-8 text-primary" />
+            </div>
+            <p className="text-base font-semibold text-foreground">
               Glissez-déposez une fiche PDF
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Centris, DuProprio, RE/MAX, Royal LePage...
+            <p className="text-sm text-primary mt-1">
+              ou cliquez pour sélectionner un fichier
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Extraction automatique des prix, loyers, taxes...
             </p>
           </div>
         )}

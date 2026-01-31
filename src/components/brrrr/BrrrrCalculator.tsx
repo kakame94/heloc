@@ -31,25 +31,38 @@ import { useBrrrrCalculator, type BrrrrFormInput } from '@/hooks/useBrrrrCalcula
 import type { ExtractedPropertyData } from '@/lib/pdf-extractor'
 
 // Import dynamique du PdfUploader pour éviter les erreurs SSG avec PDF.js
-const PdfUploader = dynamic(
+const DynamicPdfUploader = dynamic(
   () => import('./PdfUploader').then((mod) => mod.PdfUploader),
-  {
-    ssr: false,
-    loading: () => (
-      <Card className="overflow-hidden">
-        <CardHeader className="py-3 px-4 bg-gradient-to-r from-primary/10 to-primary/5">
+  { ssr: false }
+)
+
+// Wrapper pour gérer le chargement du PDF uploader
+function PdfUploaderSection({ onDataExtracted }: { onDataExtracted: (data: ExtractedPropertyData) => void }) {
+  const [isClient, setIsClient] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <Card className="overflow-hidden border-2 border-dashed border-primary/30 bg-primary/5">
+        <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Importer une fiche PDF
+            <FileText className="h-4 w-4 text-primary" />
+            📄 Importer une fiche PDF
           </CardTitle>
         </CardHeader>
-        <div className="p-4 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <CardContent className="p-4 text-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Chargement...</p>
+        </CardContent>
       </Card>
-    ),
+    )
   }
-)
+
+  return <DynamicPdfUploader onDataExtracted={onDataExtracted} />
+}
 
 // Schéma de validation
 const brrrrFormSchema = z.object({
@@ -221,8 +234,8 @@ export function BrrrrCalculator({
     <div className={cn('grid gap-6 lg:grid-cols-2', className)}>
       {/* Formulaire - Colonne gauche */}
       <div className="space-y-4">
-        {/* Upload PDF */}
-        <PdfUploader onDataExtracted={handlePdfDataExtracted} />
+        {/* Upload PDF - Section bien visible */}
+        <PdfUploaderSection onDataExtracted={handlePdfDataExtracted} />
 
         <form className="space-y-4">
           {/* Section Acquisition */}
