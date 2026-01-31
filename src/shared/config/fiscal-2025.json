@@ -1,0 +1,112 @@
+{
+  "version": "2025.1",
+  "lastUpdated": "2025-01-01",
+
+  "welcomeTax": {
+    "montreal": {
+      "comparativeFactor": 1.08,
+      "brackets": [
+        { "threshold": 61500, "rate": 0.005 },
+        { "threshold": 307800, "rate": 0.01 },
+        { "threshold": 552300, "rate": 0.015 },
+        { "threshold": 1104700, "rate": 0.02 },
+        { "threshold": 2136500, "rate": 0.025 },
+        { "threshold": 3113000, "rate": 0.035 },
+        { "threshold": null, "rate": 0.04 }
+      ]
+    },
+    "quebec": {
+      "comparativeFactor": 1.00,
+      "brackets": [
+        { "threshold": 58900, "rate": 0.005 },
+        { "threshold": 294600, "rate": 0.01 },
+        { "threshold": null, "rate": 0.015 }
+      ]
+    },
+    "standard": {
+      "comparativeFactor": 1.00,
+      "brackets": [
+        { "threshold": 55200, "rate": 0.005 },
+        { "threshold": 276200, "rate": 0.01 },
+        { "threshold": null, "rate": 0.015 }
+      ]
+    }
+  },
+
+  "schlPremiums": {
+    "standard": [
+      { "ltvMax": 65, "premium": 0.006 },
+      { "ltvMax": 75, "premium": 0.017 },
+      { "ltvMax": 80, "premium": 0.024 },
+      { "ltvMax": 85, "premium": 0.028 },
+      { "ltvMax": 90, "premium": 0.031 },
+      { "ltvMax": 95, "premium": 0.040 }
+    ],
+    "surcharge30Years": 0.002,
+    "aphSelectDiscount": {
+      "tier1": 0.10,
+      "tier2": 0.20,
+      "tier3": 0.30
+    }
+  },
+
+  "stressTest": {
+    "floorRate": 0.0525,
+    "buffer": 0.02,
+    "minDSCR": 1.1
+  },
+
+  "mliSelect": {
+    "enabled": true,
+    "maxAmortization": 50,
+    "maxLTV": 0.95,
+    "minUnits": 5
+  },
+
+  "taxBrackets": {
+    "federal2025": {
+      "indexation": 0.027,
+      "brackets": [
+        { "threshold": 57375, "rate": 0.145 },
+        { "threshold": 114750, "rate": 0.205 },
+        { "threshold": 177882, "rate": 0.26 },
+        { "threshold": 253414, "rate": 0.29 },
+        { "threshold": null, "rate": 0.33 }
+      ],
+      "quebecAbatement": 0.165
+    },
+    "quebec2025": {
+      "indexation": 0.0285,
+      "brackets": [
+        { "threshold": 53255, "rate": 0.14 },
+        { "threshold": 106495, "rate": 0.19 },
+        { "threshold": 129590, "rate": 0.24 },
+        { "threshold": null, "rate": 0.2575 }
+      ]
+    }
+  },
+
+  "talGuidance": {
+    "rentIncreaseIndex2025": 0.059,
+    "maintenanceIndex": 0.069,
+    "taxesPassthrough": 1.0,
+    "minNoticeDays": 90
+  },
+
+  "closingCosts": {
+    "notaryFees": { "min": 1500, "max": 2500 },
+    "inspectionFee": 600,
+    "appraisalFee": 400,
+    "titleInsurance": 350,
+    "tvqOnSchlPremium": 0.09975
+  },
+
+  "defaults": {
+    "vacancyRate": 0.05,
+    "managementFee": 0.08,
+    "maintenancePerDoor": 500,
+    "snowRemovalPerUnit": 200,
+    "insurancePerDoor": 600,
+    "rentGrowthRate": 0.02
+  }
+}
