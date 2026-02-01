@@ -111,34 +111,46 @@ export function PdfUploader({ onDataExtracted, className }: PdfUploaderProps) {
     setCurrentStep(0)
     setAllStepsComplete(false)
 
+    // Référence pour nettoyer l'intervalle
+    let stepInterval: NodeJS.Timeout | null = null
+
     try {
       // Lancer l'extraction avec progression simulée en parallèle
       let stepIndex = 0
-      const stepInterval = setInterval(() => {
+      stepInterval = setInterval(() => {
         if (stepIndex < PROCESSING_STEPS.length - 1) {
           stepIndex++
           setCurrentStep(stepIndex)
         }
-      }, 350) // Avancer rapidement
+      }, 350)
 
       const data = await extractPropertyDataFromPdf(file)
 
-      // Arrêter l'intervalle et passer directement à la fin
-      clearInterval(stepInterval)
-      setCurrentStep(PROCESSING_STEPS.length - 1)
+      // Arrêter l'intervalle
+      if (stepInterval) {
+        clearInterval(stepInterval)
+        stepInterval = null
+      }
 
-      // Marquer toutes les étapes comme complètes (pour afficher la coche verte)
+      // Passer à la dernière étape
+      setCurrentStep(PROCESSING_STEPS.length - 1)
       setAllStepsComplete(true)
 
-      // Court délai pour montrer "Analyse terminée ✓" puis afficher les résultats
-      await new Promise(resolve => setTimeout(resolve, 400))
-
+      // Stocker les données immédiatement
       setExtractedData(data)
-      setState('success')
+
+      // Court délai puis passer à success
+      setTimeout(() => {
+        setState('success')
+        processingRef.current = false
+      }, 500)
+
     } catch (error) {
-      console.error('Erreur:', error)
+      console.error('Erreur extraction PDF:', error)
+      if (stepInterval) {
+        clearInterval(stepInterval)
+      }
       setState('error')
-    } finally {
       processingRef.current = false
     }
   }
