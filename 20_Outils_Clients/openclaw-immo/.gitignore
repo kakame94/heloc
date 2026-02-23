@@ -1,0 +1,11 @@
+.env
+.env.local
+*.json.key
+credentials/*.json
+!credentials/.gitkeep
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+pgdata/

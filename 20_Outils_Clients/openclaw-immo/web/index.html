@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <title>OpenClaw Immo — Plateforme Premium</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Recherche automatisée de triplex et quadruplex avec analyse financière en temps réel. Plateforme d'investissement immobilier premium.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: rgba(255, 255, 255, 0.03);
+      --surface-hover: rgba(255, 255, 255, 0.07);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.5);
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --font-main: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Vibrant Background Blobs */
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(140px);
+      z-index: -1;
+      opacity: 0.6;
+      pointer-events: none;
+      animation: float 20s infinite alternate ease-in-out;
+    }
+
+    body::before {
+      top: -10%;
+      left: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: radial-gradient(circle, rgba(124, 58, 237, 0.4) 0%, transparent 70%);
+    }
+
+    body::after {
+      bottom: -10%;
+      right: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.4) 0%, transparent 70%);
+      animation-delay: -10s;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      100% {
+        transform: translate(50px, 50px) scale(1.1);
+      }
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    header h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      font-weight: 300;
+    }
+
+    /* Glassmorphic Utilities */
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Search & Filters */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      animation: fadeIn 1s ease-out 0.3s backwards;
+      align-items: center;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .toolbar input,
+    .toolbar select {
+      flex: 1;
+      min-width: 180px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.8rem 1.2rem;
+      border-radius: 10px;
+      font-family: var(--font-main);
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .toolbar input:focus,
+    .toolbar select:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Modes & Toggles */
+    .toggle-group {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.4rem;
+      border-radius: 12px;
+    }
+
+    .toggle-group button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--font-main);
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-group button.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .toggle-group.dark-accent button.active {
+      background: #4f46e5;
+      /* Indigo for Down Payment */
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.5);
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+      animation: staggerUp 0.6s ease-out 0.5s backwards;
+    }
+
+    @keyframes staggerUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      position: relative;
+      padding: 1.5rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .tag-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      align-items: flex-start;
+    }
+
+    .card-type {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      font-weight: 700;
+      background: rgba(59, 130, 246, 0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+    }
+
+    .region-badge {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+    }
+
+    .region-mtl {
+      color: #f472b6;
+      background: rgba(244, 114, 182, 0.1);
+      border: 1px solid rgba(244, 114, 182, 0.2);
+    }
+
+    .region-gat {
+      color: #2dd4bf;
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.2);
+    }
+
+    .region-lvl {
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .region-lng {
+      color: #a855f7;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.2);
+    }
+
+    .card-price {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      text-align: right;
+    }
+
+    .card-address {
+      font-size: 1.05rem;
+      font-weight: 500;
+      margin-bottom: 0.2rem;
+      line-height: 1.3;
+    }
+
+    .card-sector {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1rem;
+      border-radius: 12px;
+      flex: 1;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .metric-value {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      font-size: 0.85rem;
+      margin-top: auto;
+    }
+
+    .btn-link {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .btn-link:hover {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    /* Tables */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 16px;
+      animation: staggerUp 0.6s ease-out 0.5s backwards;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      padding: 1.2rem 1rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      background: rgba(0, 0, 0, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th:hover {
+      color: var(--text);
+    }
+
+    td {
+      padding: 1rem;
+      font-size: 0.95rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.2s;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .text-green {
+      color: var(--green);
+    }
+
+    .text-red {
+      color: var(--red);
+    }
+
+    .text-yellow {
+      color: var(--yellow);
+    }
+
+    .badge {
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .badge-green {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-yellow {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--yellow);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>OpenClaw Immo</h1>
+      <p>Intelligence Immobilière & Scraping Automatisé</p>
+    </header>
+
+    <div class="toolbar glass" id="search-toolbar">
+      <input type="text" id="search" placeholder="Rechercher par adresse, MLS, ville...">
+      <select id="filter-type">
+        <option value="">Tous les types</option>
+        <option value="duplex">Duplex</option>
+        <option value="triplex">Triplex</option>
+        <option value="quadruplex">Quadruplex</option>
+        <option value="quintuplex">Quintuplex / Plex</option>
+      </select>
+      <select id="filter-secteur">
+        <option value="">Toutes les régions</option>
+        <option value="montreal">Grand Montréal</option>
+        <option value="gatineau">Gatineau</option>
+        <option value="laval">Laval</option>
+        <option value="longueuil">Longueuil</option>
+      </select>
+
+      <!-- Down Payment Toggle -->
+      <div class="toggle-group dark-accent" style="margin-left: auto;">
+        <button id="dp-5" onclick="setDP(0.05)">Mise de fonds 5%</button>
+        <button id="dp-10" class="active" onclick="setDP(0.10)">10%</button>
+        <button id="dp-20" onclick="setDP(0.20)">20%</button>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="toggle-group">
+        <button id="btn-cards" class="active" onclick="setView('cards')">Cartes</button>
+        <button id="btn-table" onclick="setView('table')">Tableau</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div
+      style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size:0.9rem">
+      <div id="assumption-info">Calculs basés sur 3.75% d'intérêt (25 ans).</div>
+      <div id="stats-counter" style="font-weight: 600; color: #fff;"></div>
+    </div>
+
+    <!-- Cards View -->
+    <div id="view-cards" class="cards-grid">
+      <div class="empty-state" style="grid-column: 1/-1;">
+        Chargement de l'API en cours...
+      </div>
+    </div>
+
+    <!-- Table View -->
+    <div id="view-table" class="table-wrapper glass" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="0">Adresse</th>
+            <th data-col="1">Prix</th>
+            <th data-col="2">Type & Région</th>
+            <th data-col="3">Revenus brut (Mois)</th>
+            <th data-col="16">MRB</th>
+            <th data-col="17">MRN</th>
+            <th data-col="9">Cashflow Net</th>
+            <th data-col="10">DCR</th>
+            <th data-col="4">Lien</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:8000/api/listings';
+
+    let allRawData = [];
+    let processedData = [];
+    let sortCol = 7; // default sort by first_seen
+    let sortAsc = false;
+    let currentView = 'cards';
+    let currentDP = 0.10; // Default 10%
+
+    // Financial Constants
+    const INTEREST_RATE = 0.0375; // 3.75%
+    const AMORTIZATION_YEARS = 25;
+
+    // Standard PMT calculation for mortgage
+    function calculatePMT(ratePerPeriod, numberOfPeriods, presentValue) {
+      if (ratePerPeriod === 0) return presentValue / numberOfPeriods;
+      return presentValue * ratePerPeriod / (1 - Math.pow(1 + ratePerPeriod, -numberOfPeriods));
+    }
+
+    function calculateFinancials(rawListing, dpPct) {
+      const price = rawListing.price || 0;
+      const analysis = rawListing.analysis;
+      if (!analysis || price <= 0) return null;
+
+      const downPaymentAmt = price * dpPct;
+      let cmhcRate = 0;
+
+      // Calculate CMHC Insurance if Down Payment < 20%
+      if (dpPct < 0.20) {
+        if (dpPct < 0.10) cmhcRate = 0.040; // 5% down = 4.0%
+        else if (dpPct < 0.15) cmhcRate = 0.031; // 10% down = 3.1%
+        else cmhcRate = 0.028; // 15% down = 2.8%
+      }
+
+      const cmhcPremium = (price - downPaymentAmt) * cmhcRate;
+      const totalLoan = price - downPaymentAmt + cmhcPremium;
+
+      // Monthly Mortgage
+      const r = INTEREST_RATE / 12;
+      const n = AMORTIZATION_YEARS * 12;
+      const newMortgageMonthly = calculatePMT(r, n, totalLoan);
+
+      // Extract Net Operating Income (NOI)
+      // Base Cashflow = NOI - Original Mortgage => NOI = Base Cashflow + Original Mortgage
+      const originalCashflow = analysis.cashflow_monthly || 0;
+      const originalMortgage = analysis.mortgage_monthly || 0;
+      const noiMonthly = originalCashflow + originalMortgage;
+
+      // New Cashflow
+      const newCashflowMonthly = noiMonthly - newMortgageMonthly;
+
+      // New DCR
+      const newDcr = newMortgageMonthly > 0 ? (noiMonthly / newMortgageMonthly) : 0;
+
+      const mrb = (analysis.net_rental_income_monthly > 0) ? price / (analysis.net_rental_income_monthly * 12) : null;
+      const mrn = (noiMonthly > 0) ? price / (noiMonthly * 12) : null;
+
+      return {
+        mortgage_monthly: Math.round(newMortgageMonthly),
+        cashflow_monthly: Math.round(newCashflowMonthly),
+        dcr: newDcr,
+        noi: noiMonthly,
+        mrb: mrb,
+        mrn: mrn
+      };
+    }
+
+    function processData() {
+      processedData = allRawData.map(l => {
+        const a = l.analysis || {};
+
+        // Recalculate based on current DP
+        const fin = calculateFinancials(l, currentDP);
+
+        return [
+          l.address || '',                                          // 0
+          l.price || 0,                                             // 1
+          (l.property_type || '').toLowerCase(),                    // 2
+          a.net_rental_income_monthly || 0,                         // 3 (gross/net proxy)
+          l.listing_url || '#',                                     // 4
+          l.city || '',                                             // 5
+          l.region || '',                                           // 6 (Region: montreal/gatineau)
+          l.first_seen_at ? l.first_seen_at.substring(0, 16).replace('T', ' ') : '', // 7
+          l.mls_number || '',                                       // 8
+          fin ? fin.cashflow_monthly : (a.cashflow_monthly || 0),   // 9 dynamic
+          fin ? fin.dcr : (a.dcr || 0),                             // 10 dynamic
+          fin ? ((fin.noi * 12) / l.price) * 100 : (a.cap_rate || 0),// 11 Cap Rate
+          null,                                                     // 12 Coc (ignore)
+          null,                                                     // 13 Welcome (ignore)
+          fin ? fin.mortgage_monthly : (a.mortgage_monthly || 0),   // 14 dynamic
+          l.num_units || 0,                                         // 15
+          fin ? fin.mrb : null,                                     // 16 MRB
+          fin ? fin.mrn : null                                      // 17 MRN
+        ];
+      });
+      render();
+    }
+
+    function setDP(val) {
+      currentDP = val;
+      document.getElementById('dp-5').classList.toggle('active', val === 0.05);
+      document.getElementById('dp-10').classList.toggle('active', val === 0.10);
+      document.getElementById('dp-20').classList.toggle('active', val === 0.20);
+      processData(); // Recalculate everything
+    }
+
+    function setView(view) {
+      currentView = view;
+      document.getElementById('btn-cards').classList.toggle('active', view === 'cards');
+      document.getElementById('btn-table').classList.toggle('active', view === 'table');
+      document.getElementById('view-cards').style.display = view === 'cards' ? 'grid' : 'none';
+      document.getElementById('view-table').style.display = view === 'table' ? 'block' : 'none';
+      render();
+    }
+
+    async function loadData() {
+      try {
+        const resp = await fetch(API_URL);
+        if (!resp.ok) throw new Error(`API HTTP ${resp.status}`);
+        const data = await resp.json();
+        allRawData = data.listings;
+        processData();
+      } catch (err) {
+        document.getElementById('view-cards').innerHTML = `
+          <div class="empty-state glass" style="grid-column: 1/-1; border-color: rgba(239,68,68,0.3);">
+            ⚠️ Erreur API : Assurez-vous que le backend FastAPI est lancé sur le port 8000.
+          </div>
+        `;
+      }
+    }
+
+    function formatMoney(val) {
+      if (val === null || isNaN(val)) return 'N/A';
+      return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(val);
+    }
+
+    function dcrBadge(val) {
+      if (val === null || val === 0) return `<span class="badge">N/A</span>`;
+      if (val >= 1.2) return `<span class="badge badge-green">${val.toFixed(2)}</span>`;
+      if (val >= 1.0) return `<span class="badge badge-yellow">${val.toFixed(2)}</span>`;
+      return `<span class="badge badge-red">${val.toFixed(2)}</span>`;
+    }
+
+    function cashflowClass(val) {
+      if (val === null) return '';
+      if (val > 0) return 'text-green';
+      if (val < 0) return 'text-red';
+      return 'text-yellow';
+    }
+
+    function getRegionBadge(region) {
+      if (region === 'montreal') return '<span class="region-badge region-mtl">Grand Montréal</span>';
+      if (region === 'gatineau') return '<span class="region-badge region-gat">Gatineau</span>';
+      if (region === 'laval') return '<span class="region-badge region-lvl">Laval</span>';
+      if (region === 'longueuil') return '<span class="region-badge region-lng">Longueuil</span>';
+      return `<span class="region-badge">${region}</span>`;
+    }
+
+    function getFilteredRows() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const typeFilter = document.getElementById('filter-type').value.toLowerCase();
+      const secteurFilter = document.getElementById('filter-secteur').value.toLowerCase();
+
+      let filtered = processedData.filter(row => {
+        const text = (row[0] + ' ' + row[8] + ' ' + row[5]).toLowerCase();
+        if (search && !text.includes(search)) return false;
+        if (typeFilter && !row[2].includes(typeFilter)) return false;
+        if (secteurFilter && row[6] !== secteurFilter && !row[5].toLowerCase().includes(secteurFilter)) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        let va = a[sortCol];
+        let vb = b[sortCol];
+        if (va == null) va = -99999999;
+        if (vb == null) vb = -99999999;
+        if (va < vb) return sortAsc ? -1 : 1;
+        if (va > vb) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      return filtered;
+    }
+
+    function render() {
+      const filtered = getFilteredRows();
+      document.getElementById('stats-counter').textContent = `${filtered.length} plex actifs (${(currentDP * 100)}% de mise de fonds)`;
+
+      if (currentView === 'cards') {
+        const container = document.getElementById('view-cards');
+        if (filtered.length === 0) {
+          container.innerHTML = '<div class="empty-state glass" style="grid-column: 1/-1;">Aucun résultat pour ces critères.</div>';
+        } else {
+          container.innerHTML = filtered.map(r => `
+            <div class="card glass">
+              <div class="card-header">
+                <div class="tag-group">
+                  <span class="card-type">${r[2]}</span>
+                  ${getRegionBadge(r[6])}
+                </div>
+                <div class="card-price">
+                  ${formatMoney(r[1])}<br>
+                  <span style="font-size:0.7rem; color:var(--text-muted); font-weight:400; font-family:sans-serif;">Cash: ${formatMoney(r[1] * currentDP)}</span>
+                </div>
+              </div>
+              <div class="card-address">${r[0]}</div>
+              <div class="card-sector">${r[5] ? r[5] + ' — ' : ''}MLS: ${r[8]}</div>
+              <div class="card-metrics">
+                <div class="metric">
+                  <span class="metric-label">Cashflow Net</span>
+                  <span class="metric-value ${cashflowClass(r[9])}">${r[9] !== null ? formatMoney(r[9]) + '/m' : 'N/A'}</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Ratio DCR</span>
+                  <span class="metric-value">${dcrBadge(r[10])}</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Cap Rate</span>
+                  <span class="metric-value">${r[11] !== null ? r[11].toFixed(2) + '%' : 'N/A'}</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">MRB</span>
+                  <span class="metric-value">${r[16] !== null ? r[16].toFixed(1) + 'x' : 'N/A'}</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">MRN</span>
+                  <span class="metric-value">${r[17] !== null ? r[17].toFixed(1) + 'x' : 'N/A'}</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <span style="color:var(--text-muted)">Découvert le ${r[7].split(' ')[0]}</span>
+                <a href="${r[4]}" target="_blank" class="btn-link">Voir l'annonce</a>
+              </div>
+            </div>
+          `).join('');
+        }
+      } else {
+        const tbody = document.getElementById('table-body');
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Aucun résultat.</td></tr>';
+        } else {
+          tbody.innerHTML = filtered.map(r => `
+            <tr>
+              <td><strong>${r[0]}</strong><br><span style="color:var(--text-muted);font-size:0.8rem">${r[5]} (MLS: ${r[8]})</span></td>
+              <td><span style="font-weight:700">${formatMoney(r[1])}</span><br><span style="font-size:0.75rem;color:var(--text-muted)">DP: ${formatMoney(r[1] * currentDP)}</span></td>
+              <td><span style="text-transform:capitalize;color:var(--accent);font-weight:600;">${r[2]}</span><br>${getRegionBadge(r[6])}</td>
+              <td>${formatMoney(r[3])} / mois</td>
+              <td><span style="font-weight:600">${r[16] !== null ? r[16].toFixed(1) + 'x' : 'N/A'}</span></td>
+              <td><span style="font-weight:600">${r[17] !== null ? r[17].toFixed(1) + 'x' : 'N/A'}</span></td>
+              <td class="${cashflowClass(r[9])} font-semibold">${r[9] !== null ? formatMoney(r[9]) : 'N/A'}</td>
+              <td>${dcrBadge(r[10])}</td>
+              <td><a href="${r[4]}" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">Centris ↗</a></td>
+            </tr>
+          `).join('');
+        }
+      }
+    }
+
+    // Events
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('filter-type').addEventListener('change', render);
+    document.getElementById('filter-secteur').addEventListener('change', render);
+
+    document.querySelectorAll('th[data-col]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = parseInt(th.dataset.col);
+        if (sortCol === col) { sortAsc = !sortAsc; }
+        else { sortCol = col; sortAsc = true; }
+        render();
+      });
+    });
+
+    loadData();
+    setInterval(loadData, 300000);
+  </script>
+</body>
+
+</html>

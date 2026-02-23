@@ -1,0 +1,106 @@
+##############################################################################
+# OpenClaw Immo — Docker Compose
+# Services : Backend FastAPI + PostgreSQL + OpenClaw Gateway (optionnel)
+##############################################################################
+
+services:
+  # --- Base de donnees PostgreSQL ---
+  db:
+    image: postgres:16-alpine
+    container_name: openclaw-immo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openclaw_immo
+      POSTGRES_USER: openclaw
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - openclaw-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U openclaw -d openclaw_immo" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Backend FastAPI (scraper + analyse + API) ---
+  backend:
+    build: ./backend
+    container_name: openclaw-immo-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://openclaw:${DB_PASSWORD:-changeme}@db:5432/openclaw_immo
+      MAX_PRICE: ${MAX_PRICE:-610000}
+      SCRAPE_INTERVAL_HOURS: ${SCRAPE_INTERVAL_HOURS:-4}
+      SCRAPE_MIN_DELAY_SECONDS: ${SCRAPE_MIN_DELAY_SECONDS:-3}
+      SCRAPE_MAX_DELAY_SECONDS: ${SCRAPE_MAX_DELAY_SECONDS:-8}
+      DEFAULT_INTEREST_RATE: ${DEFAULT_INTEREST_RATE:-0.0375}
+      DEFAULT_DOWN_PAYMENT_PCT: ${DEFAULT_DOWN_PAYMENT_PCT:-0.10}
+      DEFAULT_AMORTIZATION_YEARS: ${DEFAULT_AMORTIZATION_YEARS:-25}
+      GOOGLE_SHEET_ID: ${GOOGLE_SHEET_ID:-}
+      GOOGLE_SHEETS_CREDS: /app/credentials/gsheets-sa.json
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      BRIGHTDATA_API_KEY: ${BRIGHTDATA_API_KEY:-}
+      BRIGHTDATA_ZONE: ${BRIGHTDATA_ZONE:-unlocker}
+      BRIGHTDATA_ENABLED: ${BRIGHTDATA_ENABLED:-true}
+    volumes:
+      - ./credentials:/app/credentials:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - openclaw-net
+
+  # --- OpenClaw Gateway (WhatsApp AI agent — optionnel) ---
+  openclaw-gateway:
+    image: alpine/openclaw:latest
+    container_name: openclaw-immo-gateway
+    restart: unless-stopped
+    profiles: [ "openclaw" ]
+    user: root
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-config:/home/node/.openclaw
+      - ./skills:/home/node/.openclaw/skills:ro
+    environment:
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY:-}
+      - GOOGLE_SHEETS_ID=${GOOGLE_SHEET_ID:-}
+      - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+    networks:
+      - openclaw-net
+
+  openclaw-cli:
+    image: alpine/openclaw:latest
+    container_name: openclaw-immo-cli
+    profiles: [ "cli" ]
+    volumes:
+      - openclaw-config:/root/.openclaw
+      - openclaw-workspace:/root/.openclaw/workspace
+      - openclaw-credentials:/root/.openclaw/credentials
+    environment:
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY:-}
+    networks:
+      - openclaw-net
+    entrypoint: [ "openclaw" ]
+
+volumes:
+  pgdata:
+  openclaw-config:
+  openclaw-workspace:
+  openclaw-credentials:
+
+
+networks:
+  openclaw-net:
+    driver: bridge

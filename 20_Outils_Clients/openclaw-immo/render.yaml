@@ -1,0 +1,31 @@
+databases:
+  - name: openclaw-immo-db
+    databaseName: openclaw_immo
+    user: openclaw
+    plan: free
+    region: ohio
+
+services:
+  - type: web
+    name: openclaw-immo-api
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    plan: free
+    region: ohio
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: openclaw-immo-db
+          property: connectionString
+      - key: BRIGHTDATA_ZONE
+        value: web_unlocker1
+      - key: BRIGHTDATA_PASSWORD
+        sync: false
+      - key: OPENCLAW_USER_ID
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://openclaw-immo-app-123.netlify.app
+      - key: MAX_PRICE
+        value: 10000000
+    autoDeploy: true

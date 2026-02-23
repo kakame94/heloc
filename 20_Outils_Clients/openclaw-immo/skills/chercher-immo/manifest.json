@@ -1,0 +1,30 @@
+{
+  "name": "chercher-immo",
+  "version": "1.0.0",
+  "description": "Cherche des triplex/quadruplex par ville dans la base de données. L'utilisateur peut dire 'Gatineau', 'Laval', 'Montréal', 'Longueuil' ou demander tous les listings.",
+  "author": "Eliot Alanmanou",
+  "language": "python",
+  "entrypoint": "skill.py",
+  "triggers": {
+    "keywords": ["gatineau", "laval", "montréal", "montreal", "longueuil", "plex", "triplex", "quadruplex", "cherche", "listing", "annonce", "quoi de neuf", "nouveautés"]
+  },
+  "parameters": {
+    "ville": {
+      "type": "string",
+      "description": "Ville ou région à chercher (gatineau, montreal, laval, longueuil, ou 'tous')",
+      "required": false
+    },
+    "prix_max": {
+      "type": "string",
+      "description": "Prix maximum (ex: 500000)",
+      "required": false
+    },
+    "type_bien": {
+      "type": "string",
+      "description": "Type de propriété (triplex, quadruplex, ou 'tous')",
+      "required": false
+    }
+  },
+  "tools": ["http"],
+  "permissions": ["network"]
+}

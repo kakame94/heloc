@@ -1,0 +1,47 @@
+{
+  "name": "sauver-immo",
+  "version": "1.0.0",
+  "description": "Sauvegarde un bien immobilier (triplex/quadruplex) dans Google Sheets",
+  "author": "Eliot Alanmanou",
+  "language": "python",
+  "entrypoint": "skill.py",
+  "parameters": {
+    "adresse": {
+      "type": "string",
+      "description": "Adresse complète du bien",
+      "required": true
+    },
+    "prix": {
+      "type": "string",
+      "description": "Prix demandé (ex: 589 000 $)",
+      "required": true
+    },
+    "type_bien": {
+      "type": "string",
+      "description": "Type de propriété (triplex, quadruplex)",
+      "required": true
+    },
+    "revenus": {
+      "type": "string",
+      "description": "Revenus locatifs annuels ou mensuels",
+      "required": false
+    },
+    "lien": {
+      "type": "string",
+      "description": "URL de l'annonce (Centris, DuProprio, etc.)",
+      "required": true
+    },
+    "secteur": {
+      "type": "string",
+      "description": "Secteur / ville (Gatineau, Montréal, Laval, etc.)",
+      "required": true
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes ou commentaires",
+      "required": false
+    }
+  },
+  "tools": ["http"],
+  "permissions": ["network"]
+}
